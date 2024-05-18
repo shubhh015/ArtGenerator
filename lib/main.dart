@@ -20,20 +20,20 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home: const ImageScreen(title: 'Art Box'),
+      home: const HomeScreen(title: 'Art Generator'),
     );
   }
 }
 
-class ImageScreen extends StatefulWidget {
+class HomeScreen extends StatefulWidget {
   final String title;
-  const ImageScreen({Key? key, required this.title}) : super(key: key);
+  const HomeScreen({Key? key, required this.title}) : super(key: key);
 
   @override
-  State<ImageScreen> createState() => _TestState();
+  State<HomeScreen> createState() => _HomeState();
 }
 
-class _TestState extends State<ImageScreen> {
+class _HomeState extends State<HomeScreen> {
   bool isTextEmpty = true;
   TextEditingController textController = TextEditingController();
   final List<ChatMessage> messages = [];
@@ -95,26 +95,19 @@ class _TestState extends State<ImageScreen> {
     img.Image image1 = img.decodeImage(image1Bytes)!;
     img.Image image2 = img.decodeImage(image2Bytes)!;
 
-    // Resize image1 to be smaller than image2
-    double scaleFactor = 0.5; // You can adjust this factor as needed
-    img.Image resizedImage1 =
-        img.copyResize(image1, width: (image1.width * scaleFactor).round());
-
     // Create a new image with the dimensions of image2
     img.Image mergedImage =
         img.Image(width: image2.width, height: image2.height);
+    img.Image resizedImage1 =
+        img.copyResize(image1, width: (image2.width * 0.5).toInt());
 
-    // Composite resizedImage1 onto mergedImage at a specific position
-    int xPos =
-        (image2.width - resizedImage1.width) ~/ 2; // Center image1 horizontally
-    int yPos =
-        (image2.height - resizedImage1.height) ~/ 2; // Center image1 vertically
-    img.compositeImage(mergedImage, resizedImage1, dstX: xPos, dstY: yPos);
-
-    // Composite image2 onto mergedImage at the same position
     img.compositeImage(mergedImage, image2, dstX: 0, dstY: 0);
+    img.compositeImage(mergedImage, resizedImage1,
+        dstX: (image2.width / 2 - resizedImage1.width / 2).toInt(),
+        dstY: (image2.height / 2 - resizedImage1.height / 2).toInt());
 
-    return img.encodeJpg(mergedImage);
+    // Encode the merged image to a Uint8List
+    return Uint8List.fromList(img.encodeJpg(mergedImage));
   }
 
   Future<void> _pickImage() async {
@@ -169,8 +162,14 @@ class _TestState extends State<ImageScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Colors.brown,
+        backgroundColor: Colors.redAccent[200],
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.format_list_bulleted),
+            onPressed: () => {},
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -194,7 +193,7 @@ class _TestState extends State<ImageScreen> {
                           ),
                           padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue[100],
+                            color: const Color.fromARGB(255, 200, 215, 200),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -213,7 +212,7 @@ class _TestState extends State<ImageScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.image),
+                  icon: const Icon(Icons.image_rounded),
                   onPressed: _pickImage,
                 ),
                 Expanded(
@@ -227,7 +226,7 @@ class _TestState extends State<ImageScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send),
+                  icon: const Icon(Icons.send),
                   onPressed: isGeneratingImage ? null : _sendMessage,
                 ),
               ],
