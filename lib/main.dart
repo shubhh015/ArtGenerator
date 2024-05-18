@@ -100,7 +100,7 @@ class _TestState extends State<ImageScreen> {
       height: image2.height,
     );
     img.compositeImage(mergedImage, image1, dstX: 0, dstY: 0);
-    img.compositeImage(mergedImage, image2, dstX: image1.width, dstY: 0);
+    img.compositeImage(mergedImage, image2, dstX: 0, dstY: 0);
 
     return img.encodeJpg(mergedImage);
   }
