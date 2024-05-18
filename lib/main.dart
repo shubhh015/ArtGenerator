@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
 void main() {
@@ -39,17 +40,14 @@ class _TestState extends State<ImageScreen> {
   bool isGeneratingImage = false;
   Uint8List? pickedImageBytes;
   String frontImageUrl = "";
-  Future<List<Uint8List>> _generate(String query, Uint8List? backImage) async {
+  Future<List<Uint8List>> _generate(String query) async {
     textController.clear();
     setState(() {
       isTextEmpty = true;
     });
-    String backImageUrl = "";
-    if (backImage != null) {
-      backImageUrl = "data:image/png;base64,${base64.encode(backImage)}";
-    }
+
     String token =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOTBkOTAyOTctYWIyNi00Yjc2LTg1ZGYtNGNkOGIyMGMyYTM5IiwidHlwZSI6ImFwaV90b2tlbiJ9.c3opsDhqMgzel_Z5z5fHs_RrDkVwN2z8Y7MIlLHo9bw";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYzg5MWUxYWMtN2Y0Ni00YmVhLWJhMTQtOWFjMTBhNDkyZjVhIiwidHlwZSI6ImZyb250X2FwaV90b2tlbiJ9.--uMX1nPxhW2iq1AUy0apZcWYUNi1XFnd-cImcXYBuQ";
 
     String url = "https://api.edenai.run/v2/image/generation";
     var headers = {
@@ -59,8 +57,7 @@ class _TestState extends State<ImageScreen> {
 
     var payload = {
       "providers": "openai",
-      "text": "Generate 3 tattoos for $query with backgroud as $backImageUrl",
-      "image": "$backImageUrl",
+      "text": "Generate  $query",
       "resolution": "1024x1024",
       "fallback_providers": "microsoft"
     };
@@ -93,43 +90,19 @@ class _TestState extends State<ImageScreen> {
     return [];
   }
 
-  Future<Uint8List> _overlayImage(
-      Uint8List frontImage, Uint8List backImage) async {
-    String url = "https://v2.1saas.co/image/overlay";
-    var headers = {
-      "Content-Type": "application/json",
-      "auth": "458260ad-2b00-4745-a4ee-5852a3d0a0a2",
-    };
+  Future<Uint8List> mergeImages(
+      Uint8List image1Bytes, Uint8List image2Bytes) async {
+    img.Image image1 = img.decodeImage(image1Bytes)!;
+    img.Image image2 = img.decodeImage(image2Bytes)!;
 
-    String backImageUrl = "data:image/png;base64,${base64.encode(backImage)}";
-    var payload = {
-      "frontImageUrl": frontImageUrl,
-      "backImageUrl": backImageUrl,
-      "options": {
-        "opacity": 0.6,
-      },
-    };
+    img.Image mergedImage = img.Image(
+      width: image2.width,
+      height: image2.height,
+    );
+    img.compositeImage(mergedImage, image1, dstX: 0, dstY: 0);
+    img.compositeImage(mergedImage, image2, dstX: image1.width, dstY: 0);
 
-    try {
-      http.Response response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: json.encode(payload),
-      );
-      print('Overlay response: ${response.body}');
-      if (response.statusCode == 200) {
-        var result = json.decode(response.body);
-        var items = result['openai']['items'];
-        var overlayImg = items[0]['image'];
-        return base64.decode(overlayImg);
-      } else {
-        print('Overlay failed with status: ${response.body}');
-      }
-    } catch (e) {
-      print('Error occurred: $e');
-    }
-
-    return Uint8List(0);
+    return img.encodeJpg(mergedImage);
   }
 
   Future<void> _pickImage() async {
@@ -156,12 +129,13 @@ class _TestState extends State<ImageScreen> {
         isGeneratingImage = true;
       });
 
-      final imageBytesList = await _generate(text, "" as Uint8List?);
+      final imageBytesList = await _generate(text);
       if (imageBytesList.isNotEmpty) {
         Uint8List? overlayedImage;
         if (pickedImageBytes != null) {
           overlayedImage =
-              (await _generate(text, pickedImageBytes)) as Uint8List?;
+              await mergeImages(imageBytesList.first, pickedImageBytes!);
+          ;
         }
         setState(() {
           messages.add(ChatMessage(
@@ -169,6 +143,7 @@ class _TestState extends State<ImageScreen> {
                 pickedImageBytes != null ? [overlayedImage!] : imageBytesList,
             isImage: true,
           ));
+          pickedImageBytes = null;
           isGeneratingImage = false;
         });
       }
