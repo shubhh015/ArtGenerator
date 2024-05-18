@@ -95,11 +95,23 @@ class _TestState extends State<ImageScreen> {
     img.Image image1 = img.decodeImage(image1Bytes)!;
     img.Image image2 = img.decodeImage(image2Bytes)!;
 
-    img.Image mergedImage = img.Image(
-      width: image2.width,
-      height: image2.height,
-    );
-    img.compositeImage(mergedImage, image1, dstX: 0, dstY: 0);
+    // Resize image1 to be smaller than image2
+    double scaleFactor = 0.5; // You can adjust this factor as needed
+    img.Image resizedImage1 =
+        img.copyResize(image1, width: (image1.width * scaleFactor).round());
+
+    // Create a new image with the dimensions of image2
+    img.Image mergedImage =
+        img.Image(width: image2.width, height: image2.height);
+
+    // Composite resizedImage1 onto mergedImage at a specific position
+    int xPos =
+        (image2.width - resizedImage1.width) ~/ 2; // Center image1 horizontally
+    int yPos =
+        (image2.height - resizedImage1.height) ~/ 2; // Center image1 vertically
+    img.compositeImage(mergedImage, resizedImage1, dstX: xPos, dstY: yPos);
+
+    // Composite image2 onto mergedImage at the same position
     img.compositeImage(mergedImage, image2, dstX: 0, dstY: 0);
 
     return img.encodeJpg(mergedImage);
